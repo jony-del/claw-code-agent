@@ -947,7 +947,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _load_dotenv(path: Path) -> None:
+    """Load KEY=VALUE pairs from a .env file into os.environ (no-op if file absent)."""
+    if not path.is_file():
+        return
+    with path.open(encoding='utf-8') as fh:
+        for raw_line in fh:
+            line = raw_line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, _, value = line.partition('=')
+            key = key.strip()
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                value = value[1:-1]
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
 def main(argv: list[str] | None = None) -> int:
+    _load_dotenv(Path(__file__).parent.parent / '.env')
     parser = build_parser()
     args = parser.parse_args(argv)
     manifest = build_port_manifest()
